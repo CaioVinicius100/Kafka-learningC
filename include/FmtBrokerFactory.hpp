@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
 #include <string>
-#include <cppkafka/cppkafka.h>
+#include <cppkafka/configuration.h>
 #include "FmtBrokerProducer.hpp"
 
 class FmtBrokerFactory {

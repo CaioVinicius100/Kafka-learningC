@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
-#include <cppkafka/cppkafka.h>
+#include <cppkafka/configuration.h>
+#include <cppkafka/producer.h>
 
 class FmtBrokerProducer {
 public:

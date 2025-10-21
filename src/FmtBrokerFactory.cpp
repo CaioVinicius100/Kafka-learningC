@@ -3,7 +3,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <stdexcept>
-#include <vector>
+#include <map>
 
 // Remove whitespace from both ends of the provided string.
 static std::string trimWhitespace(const std::string& input) {
@@ -56,13 +56,8 @@ cppkafka::Configuration FmtBrokerFactory::loadConfigurationFromFile(const std::s
     topicNameOut = properties["topic"];
     properties.erase("topic");
 
-    std::vector<std::pair<std::string, std::string>> configurationPairs;
-    configurationPairs.reserve(properties.size());
-    for (const auto& property : properties) {
-        configurationPairs.emplace_back(property.first, property.second);
-    }
-
-    return cppkafka::Configuration{configurationPairs.begin(), configurationPairs.end()};
+    std::map<std::string, std::string> orderedConfiguration(properties.begin(), properties.end());
+    return cppkafka::Configuration(orderedConfiguration);
 }
 
 std::unique_ptr<FmtBrokerProducer> FmtBrokerFactory::createProducer(const std::string& configurationPath) {

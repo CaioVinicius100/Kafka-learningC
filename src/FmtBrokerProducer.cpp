@@ -7,6 +7,7 @@
 FmtBrokerProducer::FmtBrokerProducer(const cppkafka::Configuration& cfg, const std::string& topic)
     : producer_{cfg}, topic_{topic} {}
 
+// Publish a single message to Kafka using the provided key and payload text.
 void FmtBrokerProducer::send(const std::string& key, const std::string& payload) {
     cppkafka::MessageBuilder builder(topic_);
     builder.key(key);
