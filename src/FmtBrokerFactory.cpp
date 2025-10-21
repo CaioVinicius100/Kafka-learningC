@@ -2,47 +2,67 @@
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
-#include <algorithm>
 #include <stdexcept>
+#include <map>
 
-static inline std::string trim(const std::string& s) {
-    auto i = s.find_first_not_of(" \t\r\n");
-    if (i == std::string::npos) return "";
-    auto j = s.find_last_not_of(" \t\r\n");
-    return s.substr(i, j - i + 1);
+// Remove whitespace from both ends of the provided string.
+static std::string trimWhitespace(const std::string& input) {
+    std::size_t firstNonSpace = input.find_first_not_of(" \t\r\n");
+    if (firstNonSpace == std::string::npos) {
+        return "";
+    }
+    std::size_t lastNonSpace = input.find_last_not_of(" \t\r\n");
+    return input.substr(firstNonSpace, lastNonSpace - firstNonSpace + 1);
 }
 
-cppkafka::Configuration FmtBrokerFactory::load_config(const std::string& path, std::string& topic_out) {
-    std::ifstream in(path);
-    if (!in) throw std::runtime_error("Nao foi possivel abrir o arquivo de configuracao: " + path);
-
-    std::unordered_map<std::string, std::string> props;
-    std::string line;
-    while (std::getline(in, line)) {
-        auto hash = line.find('#');
-        if (hash != std::string::npos) line = line.substr(0, hash);
-        line = trim(line);
-        if (line.empty()) continue;
-        auto eq = line.find('=');
-        if (eq == std::string::npos) continue;
-        auto key = trim(line.substr(0, eq));
-        auto val = trim(line.substr(eq + 1));
-        if (!key.empty()) props[key] = val;
+cppkafka::Configuration FmtBrokerFactory::loadConfigurationFromFile(const std::string& path, std::string& topicNameOut) {
+    std::ifstream inputFile(path);
+    if (!inputFile) {
+        throw std::runtime_error("Nao foi possivel abrir o arquivo de configuracao: " + path);
     }
 
-    if (!props.count("bootstrap.servers")) throw std::runtime_error("Config faltando: bootstrap.servers");
-    if (!props.count("topic")) throw std::runtime_error("Config faltando: topic");
-    topic_out = props["topic"];
-    props.erase("topic");
+    std::unordered_map<std::string, std::string> properties;
+    std::string currentLine;
+    while (std::getline(inputFile, currentLine)) {
+        std::size_t commentPosition = currentLine.find('#');
+        if (commentPosition != std::string::npos) {
+            currentLine = currentLine.substr(0, commentPosition);
+        }
 
-    std::vector<std::pair<std::string, std::string>> kvs;
-    kvs.reserve(props.size());
-    for (auto& kv : props) kvs.emplace_back(kv.first, kv.second);
-    return cppkafka::Configuration{kvs.begin(), kvs.end()};
+        currentLine = trimWhitespace(currentLine);
+        if (currentLine.empty()) {
+            continue;
+        }
+
+        std::size_t equalsPosition = currentLine.find('=');
+        if (equalsPosition == std::string::npos) {
+            continue;
+        }
+
+        std::string key = trimWhitespace(currentLine.substr(0, equalsPosition));
+        std::string value = trimWhitespace(currentLine.substr(equalsPosition + 1));
+        if (!key.empty()) {
+            properties[key] = value;
+        }
+    }
+
+    if (!properties.count("bootstrap.servers")) {
+        throw std::runtime_error("Config faltando: bootstrap.servers");
+    }
+    if (!properties.count("topic")) {
+        throw std::runtime_error("Config faltando: topic");
+    }
+
+    topicNameOut = properties["topic"];
+    properties.erase("topic");
+
+    std::map<std::string, std::string> orderedConfiguration(properties.begin(), properties.end());
+    return cppkafka::Configuration(orderedConfiguration);
 }
 
-std::unique_ptr<FmtBrokerProducer> FmtBrokerFactory::make_producer(const std::string& cfg_path) {
-    std::string topic;
-    auto cfg = load_config(cfg_path, topic);
-    return std::unique_ptr<FmtBrokerProducer>(new FmtBrokerProducer(cfg, topic));
+std::unique_ptr<FmtBrokerProducer> FmtBrokerFactory::createProducer(const std::string& configurationPath) {
+    std::string topicName;
+    cppkafka::Configuration configuration = loadConfigurationFromFile(configurationPath, topicName);
+    // Use the loaded configuration and topic name to construct the producer instance consumed by main().
+    return std::unique_ptr<FmtBrokerProducer>(new FmtBrokerProducer(configuration, topicName));
 }
