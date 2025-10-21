@@ -1,5 +1,5 @@
 CXX ?= g++
-CXXFLAGS ?= -std=c++17 -O2 -Wall -Wextra -Iinclude
+CXXFLAGS ?= -std=c++14 -O2 -Wall -Wextra -Iinclude
 LDFLAGS ?= -lcppkafka -lrdkafka -lpthread
 
 SRC := $(wildcard src/*.cpp)
