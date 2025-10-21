@@ -3,6 +3,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <stdexcept>
+#include <map>
 
 // Remove whitespace from both ends of the provided string.
 static std::string trimWhitespace(const std::string& input) {
