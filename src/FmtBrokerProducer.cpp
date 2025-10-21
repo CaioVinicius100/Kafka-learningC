@@ -3,9 +3,11 @@
 #include <cppkafka/message_builder.h>
 #include <iostream>
 
+// Construct the producer with the provided Kafka configuration and topic name.
 FmtBrokerProducer::FmtBrokerProducer(const cppkafka::Configuration& cfg, const std::string& topic)
     : producer_{cfg}, topic_{topic} {}
 
+// Publish a single message to Kafka using the provided key and JSON payload.
 void FmtBrokerProducer::send(const std::string& key, const std::string& payload) {
     cppkafka::MessageBuilder builder(topic_);
     builder.key(key);
@@ -18,6 +20,7 @@ void FmtBrokerProducer::send(const std::string& key, const std::string& payload)
     }
 }
 
+// Block until all queued messages are delivered or the configured timeout elapses.
 void FmtBrokerProducer::flush() {
     producer_.flush();
 }

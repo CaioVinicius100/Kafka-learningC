@@ -6,7 +6,10 @@
 
 class FmtBrokerFactory {
 public:
-    static std::unique_ptr<FmtBrokerProducer> make_producer(const std::string& cfg_path);
+    // Create a Kafka producer configured using the provided configuration file path.
+    static std::unique_ptr<FmtBrokerProducer> createProducer(const std::string& configurationPath);
+
 private:
-    static cppkafka::Configuration load_config(const std::string& path, std::string& topic_out);
+    // Read the configuration file and return the Kafka configuration object while extracting the topic name.
+    static cppkafka::Configuration loadConfigurationFromFile(const std::string& path, std::string& topicNameOut);
 };
