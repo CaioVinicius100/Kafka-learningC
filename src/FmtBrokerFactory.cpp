@@ -56,8 +56,12 @@ cppkafka::Configuration FmtBrokerFactory::loadConfigurationFromFile(const std::s
     topicNameOut = properties["topic"];
     properties.erase("topic");
 
-    std::map<std::string, std::string> orderedConfiguration(properties.begin(), properties.end());
-    return cppkafka::Configuration(orderedConfiguration);
+    cppkafka::Configuration configuration;
+    for (const auto& entry : properties) {
+        configuration.set(entry.first, entry.second);
+    }
+
+    return configuration;
 }
 
 std::unique_ptr<FmtBrokerProducer> FmtBrokerFactory::createProducer(const std::string& configurationPath) {
