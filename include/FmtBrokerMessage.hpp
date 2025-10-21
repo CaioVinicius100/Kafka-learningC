@@ -1,5 +1,5 @@
-#ifndef __FMTBROKER_H
-#define __FMTBROKER_H
+#ifndef __FMTBROKERMESSAGE_H
+#define __FMTBROKERMESSAGE_H
 
 // STD
 #include <string>

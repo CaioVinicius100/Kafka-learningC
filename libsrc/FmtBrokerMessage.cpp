@@ -1,4 +1,3 @@
-// Ajustes de macros para alguns warnings específicos de build
 #ifndef _DEFAULT_SOURCE
 #define _DEFAULT_SOURCE 1
 #endif
@@ -30,7 +29,7 @@
 #include "mb.h"
 
 // LOCAL
-#include "FmtBroker.hpp"
+#include "FmtBrokerMessage.hpp"
 #include "ConfigFileBR.hpp"
 #include "ShcmsgLogger.hpp"
 #include "utility.h"
@@ -55,10 +54,10 @@ namespace
 }
 
 // Static member definition
-unsigned short FmtBroker::mSegmentIdNwSetData = 0;
-FmtBroker::~FmtBroker()
+unsigned short FmtBrokerMessage::mSegmentIdNwSetData = 0;
+FmtBrokerMessage::~FmtBrokerMessage()
 {
-    OTraceInfo("~FmtBroker()--------------\n");
+    OTraceInfo("~FmtBrokerMessage()--------------\n");
     try
     {
         if (m_producer)
@@ -80,20 +79,20 @@ inline bool iequals(const std::string &a, const std::string &b)
         });
 }
 
-void FmtBroker::init()
+void FmtBrokerMessage::init()
 {
     postInit();
 }
 
-void FmtBroker::exec()
+void FmtBrokerMessage::exec()
 {
-    OTraceInfo("FmtBroker::exec - no-op (aguardando eventos externos)\n");
+    OTraceInfo("FmtBrokerMessage::exec - no-op (aguardando eventos externos)\n");
 }
 
 // Construtor
-FmtBroker::FmtBroker() : MailboxBaseBR()
+FmtBrokerMessage::FmtBrokerMessage() : MailboxBaseBR()
 {
-    OTraceInfo("FmtBroker()\n");
+    OTraceInfo("FmtBrokerMessage()\n");
 
     mFmtName = "fmtbroker/1.0.0";
     mServiceName = "";
@@ -112,9 +111,9 @@ FmtBroker::FmtBroker() : MailboxBaseBR()
     mSendIso8583 = true;
 }
 
-void FmtBroker::postInit()
+void FmtBrokerMessage::postInit()
 {
-    OTraceDebug("FmtBroker::postInit\n");
+    OTraceDebug("FmtBrokerMessage::postInit\n");
 
     // Arquivo de configuração
     ConfigFileBR lConfig;
@@ -356,17 +355,17 @@ void FmtBroker::postInit()
         std::string initErr;
         if (m_simpleProducer->init(cfg, &initErr)) {
             m_simpleProducerInit = true;
-            OTraceInfo("FmtBroker: wrapper FmtBrokerProducer inicializado (topic=%s).\n", cfg.getTopic().c_str());
+            OTraceInfo("FmtBrokerMessage: wrapper FmtBrokerProducer inicializado (topic=%s).\n", cfg.getTopic().c_str());
         } else {
-            OTraceWarning("FmtBroker: falha init FmtBrokerProducer (%s) - mantendo apenas caminho legado.\n", initErr.c_str());
+            OTraceWarning("FmtBrokerMessage: falha init FmtBrokerProducer (%s) - mantendo apenas caminho legado.\n", initErr.c_str());
             m_simpleProducer.reset();
         }
     } else {
-        OTraceDebug("FmtBroker: não carregou FmtBrokerConfig (%s) - prossegue só com producer legado.\n", cfgErr.c_str());
+        OTraceDebug("FmtBrokerMessage: não carregou FmtBrokerConfig (%s) - prossegue só com producer legado.\n", cfgErr.c_str());
     }
 
     if (!legacyOk && !m_simpleProducerInit) {
-        OTraceFatal("FmtBroker: nenhum producer Kafka inicializado. Abortando.\n");
+        OTraceFatal("FmtBrokerMessage: nenhum producer Kafka inicializado. Abortando.\n");
         throw std::runtime_error("Kafka producer init failed");
     }
 
@@ -377,7 +376,7 @@ void FmtBroker::postInit()
         if (applied[i].key == "acks") acksValue = applied[i].value;
     }
     if (idempotenceOn && !acksValue.empty() && acksValue != "all" && acksValue != "-1") {
-        OTraceError("Kafka config inconsistente: enable.idempotence=true mas acks=%s (esperado 'all'). Reavalie FmtBroker.cfg.\n", acksValue.c_str());
+        OTraceError("Kafka config inconsistente: enable.idempotence=true mas acks=%s (esperado 'all'). Reavalie %s.cfg.\n", acksValue.c_str(), getFmtName().c_str());
     }
 
     // Sumário dos parâmetros Kafka
@@ -391,7 +390,7 @@ void FmtBroker::postInit()
     lConfig.closeFile();
 
     // Dump final de parâmetros
-    OTraceDebug("========== PARAMETROS LIDOS (FmtBroker): ==========\n");
+    OTraceDebug("========== PARAMETROS LIDOS (FmtBrokerMessage): ==========\n");
     OTraceDebug("  serviceContentType.......:[%s]\n", mServiceContentType.c_str());
     OTraceDebug("  tokenContentType.........:[%s]\n", mTokenContentType.c_str());
     OTraceDebug("  bootstrap.servers........:[%s]\n", mBootstrapServers.c_str());
@@ -406,13 +405,13 @@ void FmtBroker::postInit()
     OTraceDebug("=======================================\n");
 }
 
-void FmtBroker::postClearMsg()
+void FmtBrokerMessage::postClearMsg()
 {
-    OTraceDebug("FmtBroker::postClearMsg\n");
+    OTraceDebug("FmtBrokerMessage::postClearMsg\n");
     mServiceName = "";
 }
 
-bool FmtBroker::getTransactionName(ShcmsgHeader *msg)
+bool FmtBrokerMessage::getTransactionName(ShcmsgHeader *msg)
 {
     char lBuffer[128] = {0};
     int lDataLen = 0;
@@ -435,7 +434,7 @@ bool FmtBroker::getTransactionName(ShcmsgHeader *msg)
     return false;
 }
 
-bool FmtBroker::getServiceName(ShcmsgHeader *msg)
+bool FmtBrokerMessage::getServiceName(ShcmsgHeader *msg)
 {
     if (getTransactionName(msg))
     {
@@ -455,7 +454,7 @@ bool FmtBroker::getServiceName(ShcmsgHeader *msg)
     return !mServiceName.empty();
 }
 
-bool FmtBroker::indicadorReversaoParcial(ShcmsgHeader *msg)
+bool FmtBrokerMessage::indicadorReversaoParcial(ShcmsgHeader *msg)
 {
     double lAmountValue = 0.0;
     lAmountValue = dbm_dectodbl(&msg->msg.new_amount);
@@ -468,7 +467,7 @@ bool FmtBroker::indicadorReversaoParcial(ShcmsgHeader *msg)
     return false;
 }
 
-bool FmtBroker::isVendaDebito()
+bool FmtBrokerMessage::isVendaDebito()
 {
     if (strcmp(mServiceName.c_str(), VEND_DBT) == 0)
     {
@@ -478,7 +477,7 @@ bool FmtBroker::isVendaDebito()
     return false;
 }
 
-bool FmtBroker::isReversaoVendaDebito()
+bool FmtBrokerMessage::isReversaoVendaDebito()
 {
     if (strcmp(mServiceName.c_str(), EST_VEND_DBT) == 0)
     {
@@ -488,7 +487,7 @@ bool FmtBroker::isReversaoVendaDebito()
     return false;
 }
 
-bool FmtBroker::isAdviceVendaDebito()
+bool FmtBrokerMessage::isAdviceVendaDebito()
 {
     if ((mTransactionName.compare(ADV_VEND_DBT) == 0) || (mTransactionName.compare(ADV_SAQUE_DBT) == 0) || (mTransactionName.compare(ADV_REEMB_COMP_DBT) == 0) || (mTransactionName.compare(ADV_ACC_FDG_DBT) == 0) || (mTransactionName.compare(ADV_ORIG_CRD_DBT) == 0))
     {
@@ -498,7 +497,7 @@ bool FmtBroker::isAdviceVendaDebito()
     return false;
 }
 
-bool FmtBroker::isVendaDebitoCachBack(ShcmsgHeader *msg)
+bool FmtBrokerMessage::isVendaDebitoCachBack(ShcmsgHeader *msg)
 {
     double lAmountValue = 0.0;
     lAmountValue = dbm_dectodbl(&msg->msg.cash_back);
@@ -511,7 +510,7 @@ bool FmtBroker::isVendaDebitoCachBack(ShcmsgHeader *msg)
     return false;
 }
 
-bool FmtBroker::isAccountFunding()
+bool FmtBrokerMessage::isAccountFunding()
 {
     if ((mTransactionName.compare(ACC_FDG_DBT) == 0) ||
         (mTransactionName.compare(ADV_ACC_FDG_DBT) == 0) ||
@@ -524,26 +523,26 @@ bool FmtBroker::isAccountFunding()
     return false;
 }
 
-std::string FmtBroker::getKafkaBootstrapServers()
+std::string FmtBrokerMessage::getKafkaBootstrapServers()
 {
     return mBootstrapServers;
 }
 
-std::string FmtBroker::getKafkaTopic()
+std::string FmtBrokerMessage::getKafkaTopic()
 {
     return mTopic;
 }
 
-bool FmtBroker::tokenEnable()
+bool FmtBrokerMessage::tokenEnable()
 {
-    OTraceDebug("FmtBroker::tokenEnable\n");
+    OTraceDebug("FmtBrokerMessage::tokenEnable\n");
 
     return mTokenEnable;
 }
 
-void FmtBroker::processPreRequest(ShcmsgHeader *msg, json::object &jsonObject)
+void FmtBrokerMessage::processPreRequest(ShcmsgHeader *msg, json::object &jsonObject)
 {
-    OTraceDebug("FmtBroker::processPreRequest\n");
+    OTraceDebug("FmtBrokerMessage::processPreRequest\n");
 
     if (tokenEnable())
     {
@@ -556,7 +555,7 @@ void FmtBroker::processPreRequest(ShcmsgHeader *msg, json::object &jsonObject)
 }
 
 // Monta JSON e publica no Kafka
-void FmtBroker::processTransaction(ShcmsgHeader *msg)
+void FmtBrokerMessage::processTransaction(ShcmsgHeader *msg)
 {
     if (!msg)
         return;
@@ -575,14 +574,14 @@ void FmtBroker::processTransaction(ShcmsgHeader *msg)
     // Publica no Kafka
     sendToKafka(msg, payload);
 
-    OTraceInfo("FmtBroker publish reason=[%s] trace=%06d topic=%s rc=%d\n",
+    OTraceInfo("FmtBrokerMessage publish reason=[%s] trace=%06d topic=%s rc=%d\n",
                reason.c_str(), msg->msg.trace, mTopic.c_str(), msg->msg.respcode);
 }
 
 // PAN/Track/EMV sempre mascarados.
-void FmtBroker::buildJsonRequest(ShcmsgHeader *msg, json::object &jsonObject)
+void FmtBrokerMessage::buildJsonRequest(ShcmsgHeader *msg, json::object &jsonObject)
 {
-    OTraceDebug("FmtBroker::buildJsonRequest\n");
+    OTraceDebug("FmtBrokerMessage::buildJsonRequest\n");
 
     Utility::getSegmentSwCartao(msg, m_sw_cartao);
 
@@ -695,11 +694,11 @@ void FmtBroker::buildJsonRequest(ShcmsgHeader *msg, json::object &jsonObject)
 }
 
 // Envio ao Kafka: key = codigoIdTransacao ou trace; adiciona header content-type.
-void FmtBroker::sendToKafka(ShcmsgHeader *msg, json::object &jsonObject)
+void FmtBrokerMessage::sendToKafka(ShcmsgHeader *msg, json::object &jsonObject)
 {
     if (mTopic.empty())
     {
-        OTraceError("FmtBroker::sendToKafka: tópico Kafka não configurado\n");
+        OTraceError("FmtBrokerMessage::sendToKafka: tópico Kafka não configurado\n");
         return;
     }
 
@@ -744,7 +743,7 @@ void FmtBroker::sendToKafka(ShcmsgHeader *msg, json::object &jsonObject)
             // Confere se o tópico do config bate com mTopic; se não, seguimos com mTopic mesmo (override via produce topicOverride).
             m_simpleProducer.reset(new fmtbroker::FmtBrokerProducer());
             if (!m_simpleProducer->init(cfg, &err)) {
-                OTraceWarning("FmtBroker::sendToKafka: init FmtBrokerProducer falhou (%s) - usando caminho legado direto.\n", err.c_str());
+                OTraceWarning("FmtBrokerMessage::sendToKafka: init FmtBrokerProducer falhou (%s) - usando caminho legado direto.\n", err.c_str());
                 m_simpleProducer.reset();
             } else {
                 m_simpleProducerInit = true;
@@ -757,32 +756,32 @@ void FmtBroker::sendToKafka(ShcmsgHeader *msg, json::object &jsonObject)
         std::map<std::string, std::string> extraHeaders; // vazio pois content-type é gerenciado internamente
         std::string err;
         if (!m_simpleProducer->produce(payload, key, extraHeaders, mTopic, &err)) {
-            OTraceError("FmtBroker::sendToKafka: falha produce via FmtBrokerProducer: %s\n", err.c_str());
+            OTraceError("FmtBrokerMessage::sendToKafka: falha produce via FmtBrokerProducer: %s\n", err.c_str());
         } else {
             m_simpleProducer->poll(0);
-            OTraceDebug("FmtBroker::sendToKafka(simple) enviado topic=%s key=%s trace=%06d\n", mTopic.c_str(), key.c_str(), msg->msg.trace);
+            OTraceDebug("FmtBrokerMessage::sendToKafka(simple) enviado topic=%s key=%s trace=%06d\n", mTopic.c_str(), key.c_str(), msg->msg.trace);
         }
         return; // não continua para o caminho legado
     }
 
     // Caminho legado (m_producer direto) se wrapper não pôde inicializar
     if (!m_producer) {
-        OTraceError("FmtBroker::sendToKafka: producer não inicializado (caminho legado)\n");
+        OTraceError("FmtBrokerMessage::sendToKafka: producer não inicializado (caminho legado)\n");
         return;
     }
     try {
         m_producer->produce(builder);
         size_t outq = (size_t)m_producer->get_out_queue_length();
         m_producer->poll(std::chrono::milliseconds(outq > 100 ? 5 : 0));
-        OTraceDebug("FmtBroker::sendToKafka - mensagem enviada (legado): topic=[%s], key=[%s], trace=%06d\n", mTopic.c_str(), key.c_str(), msg->msg.trace);
+        OTraceDebug("FmtBrokerMessage::sendToKafka - mensagem enviada (legado): topic=[%s], key=[%s], trace=%06d\n", mTopic.c_str(), key.c_str(), msg->msg.trace);
     } catch (const std::exception &ex) {
-        OTraceError("FmtBroker::sendToKafka exceção (legado): %s\n", ex.what());
+        OTraceError("FmtBrokerMessage::sendToKafka exceção (legado): %s\n", ex.what());
     }
 }
 
 // === Identificadores / Canal ===
 // Campos de identificação primária da transação e origem (canal, app).
-void FmtBroker::formatCodigoIdTransacao(ShcmsgHeader *msg, json::object &jsonObject)
+void FmtBrokerMessage::formatCodigoIdTransacao(ShcmsgHeader *msg, json::object &jsonObject)
 {
     char buffer[256] = {0};
     char buffer2[256] = {0};
@@ -822,13 +821,13 @@ void FmtBroker::formatCodigoIdTransacao(ShcmsgHeader *msg, json::object &jsonObj
     jsonObject["codigoIdTransacao"] = std::string(buffer);
 }
 
-void FmtBroker::formatCanal(ShcmsgHeader *msg, json::object &jsonObject)
+void FmtBrokerMessage::formatCanal(ShcmsgHeader *msg, json::object &jsonObject)
 {
     // Fixo conforme referência
     jsonObject["canal"] = 66;
 }
 
-void FmtBroker::formatAplicativoOrigem(ShcmsgHeader *msg, json::object &jsonObject)
+void FmtBrokerMessage::formatAplicativoOrigem(ShcmsgHeader *msg, json::object &jsonObject)
 {
     // Fixo "IST" conforme referência
     jsonObject["aplicativoOrigem"] = "IST";
@@ -836,14 +835,14 @@ void FmtBroker::formatAplicativoOrigem(ShcmsgHeader *msg, json::object &jsonObje
 
 // === Terminal ===
 // Dados do terminal físico/lógico e suas características.
-void FmtBroker::formatIdentificacao(ShcmsgHeader *msg, json::object &jsonObject)
+void FmtBrokerMessage::formatIdentificacao(ShcmsgHeader *msg, json::object &jsonObject)
 {
     std::string lBuffer(msg->msg.termid);
     boost::algorithm::trim_right(lBuffer);
     jsonObject["identificacao"] = lBuffer;
 }
 
-void FmtBroker::formatGeolocalizacao(ShcmsgHeader *msg, json::object &jsonObject)
+void FmtBrokerMessage::formatGeolocalizacao(ShcmsgHeader *msg, json::object &jsonObject)
 {
     char geo[60 + 1] = {0};
     if (Utility::isELO(msg))
