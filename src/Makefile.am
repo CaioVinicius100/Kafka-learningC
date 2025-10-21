@@ -2,8 +2,7 @@ CPPFLAGS = $(SW_DEBUG) -DPKGVER="$(PACKAGE)-$(VERSION)"
 
 lib_LTLIBRARIES = libFmtBroker.la
 
-libFmtBroker_la_SOURCES = FmtBroker.cpp \
-   Main.cpp
+libFmtBroker_la_SOURCES = FmtBroker.cpp
 
 AM_CPPFLAGS = \
     -DWITH_OPENSSL -DWITH_GZIP -DWITH_NONAMESPACES -DPROTOTYPE -Dunix -DLINUX -DLinux -DOBJ64 \

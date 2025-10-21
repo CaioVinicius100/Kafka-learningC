@@ -1,38 +1,42 @@
 #include <iostream>
-#include <string>
-#include <memory>
-#include "FmtBrokerFactory.hpp"
+#include <stdexcept>
+#include <thread>
+#include <chrono>
+
+#include "FmtBroker.hpp"
 #include "FmtBrokerMessage.hpp"
 
+// Demonstrates the call flow required by the BRDShcFinAuthResp transaction:
+//   1. Build the JSON payload via FmtBrokerMessage.
+//   2. Pass the generated string to FmtBroker::publish for a synchronous send.
+//   3. Pass the same payload to FmtBroker::triggerAsync to use the asynchronous path.
 int main() {
     try {
-        // Initialize the Kafka producer using the configuration file expected by the module.
-        std::unique_ptr<FmtBrokerProducer> kafkaProducer = FmtBrokerFactory::createProducer("FmtBroker.cfg");
+        fmtbroker::FmtBroker broker;
+        broker.loadConfiguration("cfg/FmtBroker.cfg");
 
-        // Build the ISO 8583 JSON payload using the dedicated formatter module.
-        FmtBrokerMessage messageBuilder;
-        messageBuilder.setMessageType("0210");
-        messageBuilder.setPan("4111111111111111");
-        messageBuilder.setProcessingCode("000000");
-        messageBuilder.setAmount("000000010000"); // 100.00 formatted as cents.
-        messageBuilder.setTransmissionDateTime("20240101123456");
-        messageBuilder.setStan("123456");
-        messageBuilder.setExpiry("2604");
-        messageBuilder.setNsu("789012");
-        messageBuilder.setResponseCode("00");
-        messageBuilder.setAuthorizationCode("ABC123");
-        const std::string jsonPayload = messageBuilder.buildJson();
+        FmtBrokerMessage message;
+        message.setMessageType("0210");
+        message.setPan("4111111111111111");
+        message.setProcessingCode("000000");
+        message.setAmount("000000010000");
+        message.setTransmissionDateTime("20240101123456");
+        message.setStan("123456");
+        message.setExpiry("2604");
+        message.setNsu("789012");
+        message.setResponseCode("00");
+        message.setAuthorizationCode("ABC123");
+        const std::string jsonPayload = message.buildJson();
 
-        // Send the JSON payload to Kafka using the NSU as the partitioning key example.
-        const std::string messageKey = "789012";
-        kafkaProducer->send(messageKey, jsonPayload);
-        kafkaProducer->flush();
+        broker.publish(jsonPayload);
+        broker.triggerAsync(jsonPayload);
 
-        std::cout << "[SENT] key=" << messageKey
-                  << " payload=" << jsonPayload << std::endl;
-        return 0;
+        // Give the detached asynchronous thread a moment to run in this example.
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     } catch (const std::exception& ex) {
-        std::cerr << "[ERROR] " << ex.what() << std::endl;
+        std::cerr << "Erro ao enviar mensagem: " << ex.what() << std::endl;
         return 1;
     }
+
+    return 0;
 }
