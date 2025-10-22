@@ -526,7 +526,7 @@ bool FmtBrokerMessage::isAccountFunding()
 std::string FmtBrokerMessage::getKafkaBootstrapServers()
 {
     return mBootstrapServers;
-}
+}       
 
 std::string FmtBrokerMessage::getKafkaTopic()
 {
